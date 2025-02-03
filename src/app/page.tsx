@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { FilePicker } from "@/components/file-picker";
+import { FilePicker } from "@/components/FilePicker";
 import {
   Card,
   CardContent,

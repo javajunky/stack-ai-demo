@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { KnowledgeBase, Resource } from "@/types/file-picker";
+import { KnowledgeBase, Resource } from "@/types/FilePicker";
 
 export const useKnowledgeBase = (connectionId: string) => {
   const queryClient = useQueryClient();

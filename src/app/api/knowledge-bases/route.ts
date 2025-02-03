@@ -55,27 +55,45 @@ export async function GET(request: Request) {
   try {
     const token = await getAuthToken();
     const { searchParams } = new URL(request.url);
-    const kbId = searchParams.get("id");
+    const connectionId = searchParams.get("connection_id");
+    const kbId = searchParams.get("kb_id");
     const resourcePath = searchParams.get("path") || "/";
 
-    if (!kbId) {
-      throw new Error("Knowledge base ID is required");
+    // If connection_id is provided, fetch knowledge bases for that connection
+    if (connectionId) {
+      return NextResponse.json(
+        await createApiResponse(
+          fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/knowledge_bases?connection_id=${connectionId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          )
+        )
+      );
     }
 
-    return NextResponse.json(
-      await createApiResponse(
-        fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/knowledge_bases/${kbId}/resources/children?resource_path=${resourcePath}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+    // If kb_id is provided, fetch resources for that knowledge base
+    if (kbId) {
+      return NextResponse.json(
+        await createApiResponse(
+          fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/knowledge_bases/${kbId}/resources/children?resource_path=${resourcePath}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          )
         )
-      )
-    );
+      );
+    }
+
+    throw new Error("Either connection_id or kb_id is required");
   } catch (error) {
-    console.error("Error fetching knowledge base resources:", error);
+    console.error("Error fetching knowledge base data:", error);
     return NextResponse.json(
       {
         error:

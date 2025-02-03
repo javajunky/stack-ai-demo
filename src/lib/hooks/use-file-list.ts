@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Resource } from "@/types/file-picker";
+import { Resource } from "@/types/FilePicker";
 
 const API_URL = "https://api.stack-ai.com";
 const SUPABASE_AUTH_URL = "https://sb.stack-ai.com";
@@ -40,12 +40,52 @@ type UseFileListProps = {
 };
 
 const useFileList = ({ connectionId, resourceId }: UseFileListProps) => {
+  // First, get the knowledge base for this connection
+  const { data: knowledgeBase } = useQuery({
+    queryKey: ["knowledge-base", connectionId],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/knowledge-bases?connection_id=${connectionId}`
+      );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to fetch knowledge base");
+      }
+      const data = await response.json();
+      // The API returns an array of knowledge bases, we want the first one
+      return Array.isArray(data) ? data[0] : data;
+    },
+  });
+
+  // Then, fetch the knowledge base resources to get indexed status
+  const { data: kbResources } = useQuery({
+    queryKey: ["kb-resources", knowledgeBase?.knowledge_base_id],
+    queryFn: async () => {
+      if (!knowledgeBase?.knowledge_base_id) {
+        return [];
+      }
+      const response = await fetch(
+        `/api/knowledge-bases/${knowledgeBase.knowledge_base_id}/resources/children?resource_path=/`
+      );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(
+          error.error || "Failed to fetch knowledge base resources"
+        );
+      }
+      const data = await response.json();
+      return data;
+    },
+    enabled: !!knowledgeBase?.knowledge_base_id,
+  });
+
+  // Finally fetch the file list and merge with knowledge base status
   return useQuery({
     queryKey: ["files", connectionId, resourceId],
     queryFn: async () => {
       const token = await getAuthToken();
       const url = new URL(
-        `${API_URL}/connections/${connectionId}/resources/children`
+        `${process.env.NEXT_PUBLIC_API_URL}/connections/${connectionId}/resources/children`
       );
 
       if (resourceId) {
@@ -54,7 +94,6 @@ const useFileList = ({ connectionId, resourceId }: UseFileListProps) => {
 
       const response = await fetch(url.toString(), {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
@@ -65,19 +104,24 @@ const useFileList = ({ connectionId, resourceId }: UseFileListProps) => {
       }
 
       const { data } = await response.json();
-      console.log("API Response data:", data); // Debug log
 
       if (!Array.isArray(data)) {
-        console.error(
-          "Expected array in data property, got:",
-          typeof data,
-          data
-        );
-        return []; // Return empty array if data is not an array
+        return [];
       }
 
-      return data as Resource[];
+      // Merge knowledge base status with file list
+      return data.map((resource: Resource) => {
+        const kbResource = kbResources?.find(
+          (kr: Resource) => kr.resource_id === resource.resource_id
+        );
+        return {
+          ...resource,
+          status: kbResource?.status || "resource",
+          knowledge_base_id: knowledgeBase?.knowledge_base_id,
+        };
+      });
     },
+    enabled: true,
   });
 };
 

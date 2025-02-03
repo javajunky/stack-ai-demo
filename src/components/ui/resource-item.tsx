@@ -1,17 +1,23 @@
 "use client";
 
-import { Resource } from "@/types/file-picker";
+import { Resource } from "@/types/FilePicker";
 import { cn } from "@/lib/utils";
-import { File, Folder } from "lucide-react";
+import { File, Folder, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type ResourceItemProps = {
   resource: Resource;
   isSelected: boolean;
   onSelect: (resourceId: string) => void;
   onClick: (resource: Resource) => void;
+  onDelete?: (resource: Resource) => void;
 };
 
 const getStatusBadge = (status?: string) => {
@@ -32,9 +38,15 @@ export const ResourceItem = ({
   isSelected,
   onSelect,
   onClick,
+  onDelete,
 }: ResourceItemProps) => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete?.(resource);
+  };
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 group">
       <Checkbox
         checked={isSelected}
         onCheckedChange={() => onSelect(resource.resource_id)}
@@ -62,6 +74,22 @@ export const ResourceItem = ({
           {new Date(resource.modified_at).toLocaleDateString()}
         </span>
       </Button>
+      {resource.status === "indexed" && onDelete && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handleDelete}
+              aria-label="Remove from index"
+            >
+              <Trash2 className="w-4 h-4 text-red-500" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Remove from index</TooltipContent>
+        </Tooltip>
+      )}
     </div>
   );
 };
