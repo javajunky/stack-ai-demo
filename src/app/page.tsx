@@ -18,9 +18,6 @@ type Connection = {
   updated_at: string;
 };
 
-const ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZic3VhZGZxaGtseG9rbWxodHNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzM0NTg5ODAsImV4cCI6MTk4OTAzNDk4MH0.Xjry9m7oc42_MsLRc1bZhTTzip3srDjJ6fJMkwhXQ9s";
-
 export default function Home() {
   const {
     data: connections,
@@ -36,7 +33,7 @@ export default function Home() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Apikey: ANON_KEY,
+            Apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
           },
           body: JSON.stringify({
             email: "stackaitest@gmail.com",
@@ -92,7 +89,7 @@ export default function Home() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ol className="list-decimal list-inside space-y-2">
+          <ol className="space-y-2 list-decimal list-inside">
             <li>
               Log into Stack AI at{" "}
               <a
@@ -103,17 +100,6 @@ export default function Home() {
               >
                 stack.ai
               </a>
-            </li>
-            <li>
-              Use these credentials:
-              <ul className="ml-6 mt-2 space-y-1">
-                <li>
-                  <strong>Email:</strong> stackaitest@gmail.com
-                </li>
-                <li>
-                  <strong>Password:</strong> !z4ZnxkyLYs#vR
-                </li>
-              </ul>
             </li>
             <li>After logging in, return to this page and refresh</li>
           </ol>
@@ -126,7 +112,7 @@ export default function Home() {
   }
 
   return (
-    <main className="container mx-auto p-4">
+    <main className="container p-4 mx-auto">
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Google Drive File Picker</CardTitle>
@@ -180,7 +166,7 @@ export default function Home() {
           <CardDescription>Full connection data</CardDescription>
         </CardHeader>
         <CardContent>
-          <pre className="bg-gray-100 p-4 rounded-lg overflow-auto max-h-96 text-sm">
+          <pre className="p-4 overflow-auto text-sm bg-gray-100 rounded-lg max-h-96">
             {JSON.stringify(connections, null, 2)}
           </pre>
         </CardContent>
