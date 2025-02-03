@@ -2,7 +2,7 @@
 
 import { Resource } from "@/types/FilePicker";
 import { cn } from "@/lib/utils";
-import { File, Folder, Trash2 } from "lucide-react";
+import { File, Folder, Trash2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +18,7 @@ type ResourceItemProps = {
   onSelect: (resourceId: string) => void;
   onClick: (resource: Resource) => void;
   onDelete?: (resource: Resource) => void;
+  onSync?: (resource: Resource) => void;
 };
 
 const getStatusBadge = (status?: string) => {
@@ -39,10 +40,16 @@ export const ResourceItem = ({
   onSelect,
   onClick,
   onDelete,
+  onSync,
 }: ResourceItemProps) => {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete?.(resource);
+  };
+
+  const handleSync = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSync?.(resource);
   };
 
   return (
@@ -88,6 +95,22 @@ export const ResourceItem = ({
             </Button>
           </TooltipTrigger>
           <TooltipContent>Remove from index</TooltipContent>
+        </Tooltip>
+      )}
+      {resource.status === "indexed" && onSync && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handleSync}
+              aria-label="Sync resource"
+            >
+              <RefreshCw className="w-4 h-4 text-blue-500" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Sync resource</TooltipContent>
         </Tooltip>
       )}
     </div>

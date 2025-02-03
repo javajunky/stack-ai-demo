@@ -112,11 +112,33 @@ const useFileList = ({ connectionId, resourceId }: UseFileListProps) => {
       // Merge knowledge base status with file list
       return data.map((resource: Resource) => {
         const kbResource = kbResources?.find(
-          (kr: Resource) => kr.resource_id === resource.resource_id
+          (kr: any) => kr.resource_id === resource.resource_id
         );
+
+        // If the resource is in the knowledge base, use its status
+        if (kbResource) {
+          return {
+            ...resource,
+            status: kbResource.status || "indexed",
+            knowledge_base_id: knowledgeBase?.knowledge_base_id,
+          };
+        }
+
+        // If the resource is not in the knowledge base but was selected for indexing
+        if (
+          knowledgeBase?.connection_source_ids?.includes(resource.resource_id)
+        ) {
+          return {
+            ...resource,
+            status: "pending",
+            knowledge_base_id: knowledgeBase?.knowledge_base_id,
+          };
+        }
+
+        // Default state
         return {
           ...resource,
-          status: kbResource?.status || "resource",
+          status: "resource",
           knowledge_base_id: knowledgeBase?.knowledge_base_id,
         };
       });

@@ -8,36 +8,71 @@ export async function POST(request: Request) {
     const token = await getAuthToken();
     const body = await request.json();
 
-    return NextResponse.json(
-      await createApiResponse(
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/knowledge_bases`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            connection_id: body.connectionId,
-            connection_source_ids: body.resourceIds,
-            name: body.name || "New Knowledge Base",
-            description: body.description || "Created from File Picker",
-            indexing_params: {
-              ocr: false,
-              unstructured: true,
-              embedding_params: {
-                embedding_model: "text-embedding-ada-002",
-                api_key: null,
-              },
-              chunker_params: {
-                chunk_size: 1500,
-                chunk_overlap: 500,
-                chunker: "sentence",
-              },
-            },
-          }),
-        })
-      )
+    console.log("Received request body:", JSON.stringify(body, null, 2));
+
+    // Ensure required fields are present
+    if (!body.connection_id) {
+      console.error("Missing connection_id in request body:", body);
+      throw new Error("connection_id is required");
+    }
+    if (!body.connection_source_ids || !body.connection_source_ids.length) {
+      console.error(
+        "Missing or empty connection_source_ids in request body:",
+        body
+      );
+      throw new Error(
+        "connection_source_ids is required and must not be empty"
+      );
+    }
+
+    // Keep the original request body and only add missing fields
+    const apiRequestBody = {
+      ...body,
+      indexing_params: body.indexing_params || {
+        ocr: false,
+        unstructured: true,
+        embedding_params: {
+          embedding_model: "text-embedding-ada-002",
+          api_key: null,
+        },
+        chunker_params: {
+          chunk_size: 1500,
+          chunk_overlap: 500,
+          chunker: "sentence",
+        },
+      },
+      org_level_role: body.org_level_role ?? null,
+      cron_job_id: body.cron_job_id ?? null,
+    };
+
+    console.log(
+      "Sending request body to API:",
+      JSON.stringify(apiRequestBody, null, 2)
     );
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/knowledge_bases`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "X-API-Key": process.env.NEXT_PUBLIC_API_KEY || "",
+        },
+        body: JSON.stringify(apiRequestBody),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("API error response:", error);
+      throw new Error(`Failed to create knowledge base: ${error}`);
+    }
+
+    const result = await response.json();
+    console.log("Knowledge base created:", result);
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Error creating knowledge base:", error);
     return NextResponse.json(
