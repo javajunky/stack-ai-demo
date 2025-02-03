@@ -12,8 +12,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+type ResourceStatus = "pending" | "indexed" | "failed" | "deleted" | "resource";
+
 type ResourceItemProps = {
-  resource: Resource;
+  resource: Resource & { status?: ResourceStatus };
   isSelected: boolean;
   onSelect: (resourceId: string) => void;
   onClick: (resource: Resource) => void;
@@ -21,7 +23,7 @@ type ResourceItemProps = {
   onSync?: (resource: Resource) => void;
 };
 
-const getStatusBadge = (status?: string) => {
+const getStatusBadge = (status?: ResourceStatus) => {
   if (!status) return null;
 
   const displayStatus = status === "resource" ? "indexed" : status;
@@ -87,8 +89,8 @@ export const ResourceItem = ({
           {new Date(resource.modified_at).toLocaleDateString()}
         </span>
       </Button>
-      {(resource.status === "indexed" || resource.status === "resource") &&
-        onDelete && (
+      <div className="flex gap-2 w-[72px] justify-end">
+        {resource.status !== "deleted" && onDelete && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -104,23 +106,24 @@ export const ResourceItem = ({
             <TooltipContent>Remove from index</TooltipContent>
           </Tooltip>
         )}
-      {(resource.status === "indexed" || resource.status === "resource") &&
-        onSync && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="transition-opacity opacity-0 group-hover:opacity-100"
-                onClick={handleSync}
-                aria-label="Sync resource"
-              >
-                <RefreshCw className="w-4 h-4 text-blue-500" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Sync resource</TooltipContent>
-          </Tooltip>
-        )}
+        {(resource.status === "indexed" || resource.status === "resource") &&
+          onSync && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="transition-opacity opacity-0 group-hover:opacity-100"
+                  onClick={handleSync}
+                  aria-label="Sync resource"
+                >
+                  <RefreshCw className="w-4 h-4 text-blue-500" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Sync resource</TooltipContent>
+            </Tooltip>
+          )}
+      </div>
     </div>
   );
 };

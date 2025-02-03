@@ -90,12 +90,15 @@ export const FilePicker = ({
     },
     onSuccess: (updatedResource) => {
       // Update the cache with the new status
-      queryClient.setQueryData(["files"], (oldData: Resource[] | undefined) => {
-        if (!oldData) return oldData;
-        return oldData.map((r) =>
-          r.resource_id === updatedResource.resource_id ? updatedResource : r
-        );
-      });
+      queryClient.setQueryData(
+        ["files", connectionId, currentResourceId],
+        (oldData: Resource[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map((r) =>
+            r.resource_id === updatedResource.resource_id ? updatedResource : r
+          );
+        }
+      );
 
       toast({
         title: "Resource de-indexed",
@@ -500,7 +503,7 @@ export const FilePicker = ({
                     onSelect={handleResourceSelect}
                     onClick={handleResourceClick}
                     onDelete={
-                      resource.status === "indexed"
+                      resource.status !== "deleted"
                         ? handleDeleteClick
                         : undefined
                     }
