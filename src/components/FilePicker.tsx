@@ -309,15 +309,14 @@ export const FilePicker = ({
       resource.inode_path.path.toLowerCase().includes(filterText.toLowerCase())
     )
     .sort((a, b) => {
-      // Sort by type first (directories before files)
-      if (a.inode_type !== b.inode_type) {
-        return a.inode_type === "directory" ? -1 : 1;
-      }
-
-      // Then sort by the selected sort method
       if (sortBy === "name") {
+        // Sort by type first (directories before files) only when sorting by name
+        if (a.inode_type !== b.inode_type) {
+          return a.inode_type === "directory" ? -1 : 1;
+        }
         return a.inode_path.path.localeCompare(b.inode_path.path);
       }
+      // When sorting by date, ignore type and sort purely by date
       return (
         new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime()
       );

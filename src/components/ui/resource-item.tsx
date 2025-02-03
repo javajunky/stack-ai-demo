@@ -79,9 +79,9 @@ export const ResourceItem = ({
         }: ${resource.inode_path.path}`}
       >
         {resource.inode_type === "directory" ? (
-          <Folder className="w-4 h-4" />
+          <Folder className="w-4 h-4 text-amber-600" />
         ) : (
-          <File className="w-4 h-4" />
+          <File className="w-4 h-4 text-blue-600" />
         )}
         <span className="truncate">{resource.inode_path.path}</span>
         {getStatusBadge(resource.status)}
