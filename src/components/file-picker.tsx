@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FilePickerProps, Resource } from "@/types/file-picker";
 import useFileList from "@/lib/hooks/use-file-list";
 import { cn } from "@/lib/utils";
-import { Loader2, ChevronRight, File, Folder } from "lucide-react";
+import { Loader2, ChevronRight, File, Folder, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +13,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const FilePicker = ({
   connectionId,
@@ -20,9 +29,11 @@ export const FilePicker = ({
   onFolderSelect,
 }: FilePickerProps) => {
   const [currentPath, setCurrentPath] = useState<string[]>([]);
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(
-    null
+  const [selectedResources, setSelectedResources] = useState<Set<string>>(
+    new Set()
   );
+  const [sortBy, setSortBy] = useState<"name" | "date">("name");
+  const [filterText, setFilterText] = useState("");
 
   const currentResourceId = currentPath[currentPath.length - 1];
 
@@ -36,8 +47,6 @@ export const FilePicker = ({
   });
 
   const handleResourceClick = (resource: Resource) => {
-    setSelectedResource(resource);
-
     if (resource.inode_type === "directory") {
       setCurrentPath((prev) => [...prev, resource.resource_id]);
       onFolderSelect?.(resource);
@@ -48,7 +57,51 @@ export const FilePicker = ({
 
   const handleBackClick = () => {
     setCurrentPath((prev) => prev.slice(0, -1));
-    setSelectedResource(null);
+    setSelectedResources(new Set());
+  };
+
+  const handleResourceSelect = (resourceId: string) => {
+    setSelectedResources((prev) => {
+      const next = new Set(prev);
+      if (next.has(resourceId)) {
+        next.delete(resourceId);
+      } else {
+        next.add(resourceId);
+      }
+      return next;
+    });
+  };
+
+  const getStatusBadge = (status?: string) => {
+    if (!status) return null;
+
+    const variants: Record<string, string> = {
+      pending: "bg-yellow-100 text-yellow-800",
+      indexed: "bg-green-100 text-green-800",
+      failed: "bg-red-100 text-red-800",
+      resource: "bg-blue-100 text-blue-800",
+    };
+
+    return (
+      <Badge className={cn("ml-2", variants[status] || "")}>{status}</Badge>
+    );
+  };
+
+  const sortedAndFilteredResources = resources
+    ?.filter((resource) =>
+      resource.inode_path.path.toLowerCase().includes(filterText.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        return a.inode_path.path.localeCompare(b.inode_path.path);
+      }
+      return (
+        new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime()
+      );
+    });
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilterText(e.target.value);
   };
 
   if (error) {
@@ -66,8 +119,35 @@ export const FilePicker = ({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">File Picker</CardTitle>
-        <CardDescription>Select files or folders to index</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl font-semibold">File Picker</CardTitle>
+            <CardDescription>Select files or folders to index</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Filter by name..."
+              value={filterText}
+              onChange={handleFilterChange}
+              className="w-48"
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">Sort By: {sortBy}</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setSortBy("name")}>
+                  {sortBy === "name" && <Check className="w-4 h-4 mr-2" />}
+                  Name
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("date")}>
+                  {sortBy === "date" && <Check className="w-4 h-4 mr-2" />}
+                  Date Modified
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -89,32 +169,41 @@ export const FilePicker = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {resources?.map((resource) => (
-                <Button
+              {sortedAndFilteredResources?.map((resource) => (
+                <div
                   key={resource.resource_id}
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start gap-3 px-2",
-                    selectedResource?.resource_id === resource.resource_id &&
-                      "bg-accent"
-                  )}
-                  onClick={() => handleResourceClick(resource)}
-                  aria-label={`${
-                    resource.inode_type === "directory" ? "Folder" : "File"
-                  }: ${resource.inode_path.path}`}
+                  className="flex items-center gap-2"
                 >
-                  {resource.inode_type === "directory" ? (
-                    <Folder className="w-4 h-4" />
-                  ) : (
-                    <File className="w-4 h-4" />
-                  )}
-                  <span className="truncate">{resource.inode_path.path}</span>
-                  {resource.status && (
+                  <Checkbox
+                    checked={selectedResources.has(resource.resource_id)}
+                    onCheckedChange={() =>
+                      handleResourceSelect(resource.resource_id)
+                    }
+                    aria-label={`Select ${resource.inode_path.path}`}
+                  />
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "flex-1 justify-start gap-3 px-2",
+                      selectedResources.has(resource.resource_id) && "bg-accent"
+                    )}
+                    onClick={() => handleResourceClick(resource)}
+                    aria-label={`${
+                      resource.inode_type === "directory" ? "Folder" : "File"
+                    }: ${resource.inode_path.path}`}
+                  >
+                    {resource.inode_type === "directory" ? (
+                      <Folder className="w-4 h-4" />
+                    ) : (
+                      <File className="w-4 h-4" />
+                    )}
+                    <span className="truncate">{resource.inode_path.path}</span>
+                    {getStatusBadge(resource.status)}
                     <span className="ml-auto text-xs text-muted-foreground">
-                      {resource.status}
+                      {new Date(resource.modified_at).toLocaleDateString()}
                     </span>
-                  )}
-                </Button>
+                  </Button>
+                </div>
               ))}
             </div>
           )}
