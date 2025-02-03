@@ -53,7 +53,7 @@ export const ResourceItem = ({
   };
 
   return (
-    <div className="flex items-center gap-2 group">
+    <div className="flex items-center gap-2 px-4 group">
       <Checkbox
         checked={isSelected}
         onCheckedChange={() => onSelect(resource.resource_id)}
@@ -87,7 +87,7 @@ export const ResourceItem = ({
             <Button
               variant="ghost"
               size="icon"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              className="transition-opacity opacity-0 group-hover:opacity-100"
               onClick={handleDelete}
               aria-label="Remove from index"
             >
@@ -103,7 +103,7 @@ export const ResourceItem = ({
             <Button
               variant="ghost"
               size="icon"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              className="transition-opacity opacity-0 group-hover:opacity-100"
               onClick={handleSync}
               aria-label="Sync resource"
             >

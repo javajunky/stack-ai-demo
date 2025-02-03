@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FilePickerProps, Resource } from "@/types/FilePicker";
 import useFileList from "@/lib/hooks/use-file-list";
-import { Loader2, ChevronRight, Check } from "lucide-react";
+import { Loader2, ChevronRight, Check, Menu, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,13 +32,26 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+} from "@/components/ui/breadcrumb";
+import KnowledgeBasePicker, {
+  KnowledgeBase,
+} from "@/components/KnowledgeBasePicker";
+
+interface PathSegment {
+  id: string;
+  name: string;
+}
 
 export const FilePicker = ({
   connectionId,
   onFileSelect,
   onFolderSelect,
 }: FilePickerProps) => {
-  const [currentPath, setCurrentPath] = useState<string[]>([]);
+  const [currentPath, setCurrentPath] = useState<PathSegment[]>([]);
   const [selectedResources, setSelectedResources] = useState<Set<string>>(
     new Set()
   );
@@ -47,11 +60,15 @@ export const FilePicker = ({
   const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(
     null
   );
+  const [selectedKnowledgeBaseId, setSelectedKnowledgeBaseId] = useState<
+    string | null
+  >(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const currentResourceId = currentPath[currentPath.length - 1];
+  const currentResourceId =
+    currentPath.length > 0 ? currentPath[currentPath.length - 1].id : undefined;
 
   const {
     data: resources,
@@ -247,7 +264,12 @@ export const FilePicker = ({
 
   const handleResourceClick = (resource: Resource) => {
     if (resource.inode_type === "directory") {
-      setCurrentPath((prev) => [...prev, resource.resource_id]);
+      const pathName =
+        resource.inode_path.path.split("/").filter(Boolean).pop() || "Unknown";
+      setCurrentPath((prev) => [
+        ...prev,
+        { id: resource.resource_id, name: pathName },
+      ]);
       onFolderSelect?.(resource);
     } else {
       onFileSelect?.(resource);
@@ -313,6 +335,34 @@ export const FilePicker = ({
     await createKnowledgeBase.mutateAsync(selectedFiles);
   };
 
+  const handleKnowledgeBaseSelect = async (kb: KnowledgeBase) => {
+    console.log("Selected Knowledge Base:", kb);
+    // Clear current path and selected resources
+    setCurrentPath([]);
+    setSelectedResources(new Set());
+
+    const kbId = kb.knowledge_base_id || kb.id;
+    if (!kbId) {
+      toast({
+        title: "Error",
+        description: "Invalid knowledge base selected",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedKnowledgeBaseId(kbId);
+
+    // Invalidate queries to reload resources with the new knowledge base
+    queryClient.invalidateQueries({ queryKey: ["files"] });
+    queryClient.invalidateQueries({ queryKey: ["knowledge-base"] });
+
+    toast({
+      title: "Knowledge Base Selected",
+      description: `Loaded Knowledge Base ${kbId.slice(0, 8)}`,
+    });
+  };
+
   if (error) {
     return (
       <Card className="w-full">
@@ -328,15 +378,30 @@ export const FilePicker = ({
   return (
     <>
       <Card className="w-full">
-        <CardHeader>
+        <CardHeader className="border-b">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-semibold">
-                File Picker
-              </CardTitle>
-              <CardDescription>
-                Select files or folders to index
-              </CardDescription>
+            <div className="flex items-center gap-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <KnowledgeBasePicker
+                    onSelect={handleKnowledgeBaseSelect}
+                    connectionId={connectionId}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <div>
+                <CardTitle className="text-xl font-semibold">
+                  File Picker
+                </CardTitle>
+                <CardDescription>
+                  Select files or folders to index
+                </CardDescription>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -345,67 +410,99 @@ export const FilePicker = ({
               >
                 Index Selected Files
               </Button>
-              <Input
-                placeholder="Filter by name..."
-                value={filterText}
-                onChange={handleFilterChange}
-                className="w-48"
-              />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">Sort By: {sortBy}</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSortBy("name")}>
-                    {sortBy === "name" && <Check className="w-4 h-4 mr-2" />}
-                    Name
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy("date")}>
-                    {sortBy === "date" && <Check className="w-4 h-4 mr-2" />}
-                    Date Modified
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {currentPath.length > 0 && (
-              <Button
-                variant="ghost"
-                onClick={handleBackClick}
-                className="flex items-center gap-2"
-                aria-label="Go back"
-              >
-                <ChevronRight className="w-4 h-4 rotate-180" />
-                Back
-              </Button>
-            )}
 
-            {isLoading ? (
-              <div className="flex justify-center p-4">
-                <Loader2 className="w-6 h-6 animate-spin" />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {sortedAndFilteredResources?.map((resource) => (
-                  <ResourceItem
-                    key={resource.resource_id}
-                    resource={resource}
-                    isSelected={selectedResources.has(resource.resource_id)}
-                    onSelect={handleResourceSelect}
-                    onClick={handleResourceClick}
-                    onDelete={
-                      resource.status === "indexed"
-                        ? handleDeleteClick
-                        : undefined
+        <div className="flex items-center gap-2 p-2 border-b bg-muted/10">
+          <div className="flex items-center flex-1 gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCurrentPath([])}
+              disabled={currentPath.length === 0}
+              className="h-9 w-9"
+              aria-label="Go to root"
+            >
+              <Home className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBackClick}
+              disabled={currentPath.length === 0}
+              className="h-9 w-9"
+              aria-label="Go back"
+            >
+              <ChevronRight className="w-5 h-5 rotate-180" />
+            </Button>
+            <Breadcrumb>
+              <BreadcrumbItem>
+                <BreadcrumbLink onClick={() => setCurrentPath([])}>
+                  My Drive
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              {currentPath.map((segment, index) => (
+                <BreadcrumbItem key={segment.id}>
+                  <BreadcrumbLink
+                    onClick={() =>
+                      setCurrentPath(currentPath.slice(0, index + 1))
                     }
-                  />
-                ))}
-              </div>
-            )}
+                  >
+                    {segment.name}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              ))}
+            </Breadcrumb>
           </div>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Filter by name..."
+              value={filterText}
+              onChange={handleFilterChange}
+              className="w-64"
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">Sort By: {sortBy}</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSortBy("name")}>
+                  {sortBy === "name" && <Check className="w-4 h-4 mr-2" />}
+                  Name
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("date")}>
+                  {sortBy === "date" && <Check className="w-4 h-4 mr-2" />}
+                  Date Modified
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-[400px]">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {sortedAndFilteredResources?.map((resource) => (
+                <ResourceItem
+                  key={resource.resource_id}
+                  resource={resource}
+                  isSelected={selectedResources.has(resource.resource_id)}
+                  onSelect={handleResourceSelect}
+                  onClick={handleResourceClick}
+                  onDelete={
+                    resource.status === "indexed"
+                      ? handleDeleteClick
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
