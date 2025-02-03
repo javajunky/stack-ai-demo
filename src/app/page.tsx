@@ -96,49 +96,6 @@ export default function Home() {
           )}
         </CardContent>
       </Card>
-
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Available Connections</CardTitle>
-          <CardDescription>All connections in your account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!connections || connections.length === 0 ? (
-            <div className="text-center text-gray-500">
-              No connections found
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {connections.map((conn) => (
-                <div key={conn.connection_id} className="p-4 border rounded-lg">
-                  <p>
-                    <strong>Connection ID:</strong> {conn.connection_id}
-                  </p>
-                  <p>
-                    <strong>Name:</strong> {conn.name}
-                  </p>
-                  <p>
-                    <strong>Created:</strong>{" "}
-                    {new Date(conn.created_at).toLocaleString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Raw Debug Information</CardTitle>
-          <CardDescription>Full connection data</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <pre className="p-4 overflow-auto text-sm bg-gray-100 rounded-lg max-h-96">
-            {JSON.stringify(connections, null, 2)}
-          </pre>
-        </CardContent>
-      </Card>
     </main>
   );
 }

@@ -90,7 +90,7 @@ export const ResourceItem = ({
         </span>
       </Button>
       <div className="flex gap-2 w-[72px] justify-end">
-        {resource.status !== "deleted" && onDelete && (
+        {(resource.status as string) !== "deleted" && onDelete && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
