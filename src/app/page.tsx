@@ -26,43 +26,11 @@ export default function Home() {
   } = useQuery({
     queryKey: ["connections"],
     queryFn: async () => {
-      // First authenticate
-      const authResponse = await fetch(
-        "https://sb.stack-ai.com/auth/v1/token?grant_type=password",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          },
-          body: JSON.stringify({
-            email: "stackaitest@gmail.com",
-            password: "!z4ZnxkyLYs#vR",
-            gotrue_meta_security: {},
-          }),
-        }
-      );
-
-      if (!authResponse.ok) {
-        const errorText = await authResponse.text();
-        throw new Error(`Failed to authenticate: ${errorText}`);
-      }
-
-      const { access_token } = await authResponse.json();
-
-      // Then fetch connections with the auth token
-      const response = await fetch(
-        "https://api.stack-ai.com/connections?connection_provider=gdrive&limit=1",
-        {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
-        }
-      );
+      const response = await fetch("/api/connections");
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch connections: ${errorText}`);
+        const error = await response.json();
+        throw new Error(error.error || "Failed to fetch connections");
       }
 
       return response.json() as Promise<Connection[]>;
