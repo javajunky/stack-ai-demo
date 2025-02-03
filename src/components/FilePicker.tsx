@@ -308,6 +308,12 @@ export const FilePicker = ({
       resource.inode_path.path.toLowerCase().includes(filterText.toLowerCase())
     )
     .sort((a, b) => {
+      // Sort by type first (directories before files)
+      if (a.inode_type !== b.inode_type) {
+        return a.inode_type === "directory" ? -1 : 1;
+      }
+
+      // Then sort by the selected sort method
       if (sortBy === "name") {
         return a.inode_path.path.localeCompare(b.inode_path.path);
       }
