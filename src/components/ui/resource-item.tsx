@@ -24,14 +24,20 @@ type ResourceItemProps = {
 const getStatusBadge = (status?: string) => {
   if (!status) return null;
 
+  const displayStatus = status === "resource" ? "indexed" : status;
+
   const variants: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800",
     indexed: "bg-green-100 text-green-800",
     failed: "bg-red-100 text-red-800",
-    resource: "bg-blue-100 text-blue-800",
+    deleted: "bg-red-100 text-red-800",
   };
 
-  return <Badge className={cn("ml-2", variants[status] || "")}>{status}</Badge>;
+  return (
+    <Badge className={cn("ml-2", variants[displayStatus] || "")}>
+      {displayStatus}
+    </Badge>
+  );
 };
 
 export const ResourceItem = ({
@@ -51,7 +57,7 @@ export const ResourceItem = ({
     e.stopPropagation();
     onSync?.(resource);
   };
-
+  console.log(resource);
   return (
     <div className="flex items-center gap-2 px-4 group">
       <Checkbox
@@ -81,38 +87,40 @@ export const ResourceItem = ({
           {new Date(resource.modified_at).toLocaleDateString()}
         </span>
       </Button>
-      {resource.status === "indexed" && onDelete && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="transition-opacity opacity-0 group-hover:opacity-100"
-              onClick={handleDelete}
-              aria-label="Remove from index"
-            >
-              <Trash2 className="w-4 h-4 text-red-500" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Remove from index</TooltipContent>
-        </Tooltip>
-      )}
-      {resource.status === "indexed" && onSync && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="transition-opacity opacity-0 group-hover:opacity-100"
-              onClick={handleSync}
-              aria-label="Sync resource"
-            >
-              <RefreshCw className="w-4 h-4 text-blue-500" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Sync resource</TooltipContent>
-        </Tooltip>
-      )}
+      {(resource.status === "indexed" || resource.status === "resource") &&
+        onDelete && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="transition-opacity opacity-0 group-hover:opacity-100"
+                onClick={handleDelete}
+                aria-label="Remove from index"
+              >
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Remove from index</TooltipContent>
+          </Tooltip>
+        )}
+      {(resource.status === "indexed" || resource.status === "resource") &&
+        onSync && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="transition-opacity opacity-0 group-hover:opacity-100"
+                onClick={handleSync}
+                aria-label="Sync resource"
+              >
+                <RefreshCw className="w-4 h-4 text-blue-500" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Sync resource</TooltipContent>
+          </Tooltip>
+        )}
     </div>
   );
 };

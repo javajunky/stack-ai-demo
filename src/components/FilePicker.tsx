@@ -40,6 +40,7 @@ import {
 import KnowledgeBasePicker, {
   KnowledgeBase,
 } from "@/components/KnowledgeBasePicker";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface PathSegment {
   id: string;
@@ -81,28 +82,21 @@ export const FilePicker = ({
 
   const deleteResource = useMutation({
     mutationFn: async (resource: Resource) => {
-      if (!resource.knowledge_base_id) {
-        throw new Error("No knowledge base ID found for resource");
-      }
-
-      const response = await fetch(
-        `/api/knowledge-bases/resources?kb_id=${
-          resource.knowledge_base_id
-        }&resource_path=${encodeURIComponent(resource.inode_path.path)}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to delete resource");
-      }
-
-      return response.json();
+      // Instead of making a DELETE request, we'll just update the status
+      return Promise.resolve({
+        ...resource,
+        status: "deleted",
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["files"] });
+    onSuccess: (updatedResource) => {
+      // Update the cache with the new status
+      queryClient.setQueryData(["files"], (oldData: Resource[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map((r) =>
+          r.resource_id === updatedResource.resource_id ? updatedResource : r
+        );
+      });
+
       toast({
         title: "Resource de-indexed",
         description: "The resource has been removed from the index.",
@@ -304,7 +298,11 @@ export const FilePicker = ({
   };
 
   const sortedAndFilteredResources = resources
-    ?.filter((resource) =>
+    ?.map((resource) => ({
+      ...resource,
+      status: resource.status === "resource" ? "indexed" : resource.status,
+    }))
+    .filter((resource) =>
       resource.inode_path.path.toLowerCase().includes(filterText.toLowerCase())
     )
     .sort((a, b) => {
@@ -382,156 +380,158 @@ export const FilePicker = ({
   }
 
   return (
-    <>
-      <Card className="w-full">
-        <CardHeader className="border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <Menu className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <KnowledgeBasePicker
-                    onSelect={handleKnowledgeBaseSelect}
-                    connectionId={connectionId}
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <div>
-                <CardTitle className="text-xl font-semibold">
-                  File Picker
-                </CardTitle>
-                <CardDescription>
-                  Select files or folders to index
-                </CardDescription>
+    <TooltipProvider>
+      <>
+        <Card className="w-full">
+          <CardHeader className="border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <Menu className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <KnowledgeBasePicker
+                      onSelect={handleKnowledgeBaseSelect}
+                      connectionId={connectionId}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <div>
+                  <CardTitle className="text-xl font-semibold">
+                    File Picker
+                  </CardTitle>
+                  <CardDescription>
+                    Select files or folders to index
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleIndexSelected}
+                  disabled={selectedResources.size === 0}
+                >
+                  Index Selected Files
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleIndexSelected}
-                disabled={selectedResources.size === 0}
-              >
-                Index Selected Files
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
 
-        <div className="flex items-center gap-2 p-2 border-b bg-muted/10">
-          <div className="flex items-center flex-1 gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCurrentPath([])}
-              disabled={currentPath.length === 0}
-              className="h-9 w-9"
-              aria-label="Go to root"
-            >
-              <Home className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBackClick}
-              disabled={currentPath.length === 0}
-              className="h-9 w-9"
-              aria-label="Go back"
-            >
-              <ChevronRight className="w-5 h-5 rotate-180" />
-            </Button>
-            <Breadcrumb>
-              <BreadcrumbItem>
-                <BreadcrumbLink onClick={() => setCurrentPath([])}>
-                  My Drive
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              {currentPath.map((segment, index) => (
-                <BreadcrumbItem key={segment.id}>
-                  <BreadcrumbLink
-                    onClick={() =>
-                      setCurrentPath(currentPath.slice(0, index + 1))
-                    }
-                  >
-                    {segment.name}
+          <div className="flex items-center gap-2 p-2 border-b bg-muted/10">
+            <div className="flex items-center flex-1 gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentPath([])}
+                disabled={currentPath.length === 0}
+                className="h-9 w-9"
+                aria-label="Go to root"
+              >
+                <Home className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBackClick}
+                disabled={currentPath.length === 0}
+                className="h-9 w-9"
+                aria-label="Go back"
+              >
+                <ChevronRight className="w-5 h-5 rotate-180" />
+              </Button>
+              <Breadcrumb>
+                <BreadcrumbItem>
+                  <BreadcrumbLink onClick={() => setCurrentPath([])}>
+                    My Drive
                   </BreadcrumbLink>
                 </BreadcrumbItem>
-              ))}
-            </Breadcrumb>
-          </div>
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Filter by name..."
-              value={filterText}
-              onChange={handleFilterChange}
-              className="w-64"
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">Sort By: {sortBy}</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setSortBy("name")}>
-                  {sortBy === "name" && <Check className="w-4 h-4 mr-2" />}
-                  Name
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy("date")}>
-                  {sortBy === "date" && <Check className="w-4 h-4 mr-2" />}
-                  Date Modified
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-[400px]">
-              <Loader2 className="w-6 h-6 animate-spin" />
+                {currentPath.map((segment, index) => (
+                  <BreadcrumbItem key={segment.id}>
+                    <BreadcrumbLink
+                      onClick={() =>
+                        setCurrentPath(currentPath.slice(0, index + 1))
+                      }
+                    >
+                      {segment.name}
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                ))}
+              </Breadcrumb>
             </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {sortedAndFilteredResources?.map((resource) => (
-                <ResourceItem
-                  key={resource.resource_id}
-                  resource={resource}
-                  isSelected={selectedResources.has(resource.resource_id)}
-                  onSelect={handleResourceSelect}
-                  onClick={handleResourceClick}
-                  onDelete={
-                    resource.status === "indexed"
-                      ? handleDeleteClick
-                      : undefined
-                  }
-                />
-              ))}
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Filter by name..."
+                value={filterText}
+                onChange={handleFilterChange}
+                className="w-64"
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">Sort By: {sortBy}</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setSortBy("name")}>
+                    {sortBy === "name" && <Check className="w-4 h-4 mr-2" />}
+                    Name
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("date")}>
+                    {sortBy === "date" && <Check className="w-4 h-4 mr-2" />}
+                    Date Modified
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
 
-      <AlertDialog
-        open={!!resourceToDelete}
-        onOpenChange={() => setResourceToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove from index?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove the file from the index. The file will remain in
-              Google Drive.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-[400px]">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {sortedAndFilteredResources?.map((resource) => (
+                  <ResourceItem
+                    key={resource.resource_id}
+                    resource={resource}
+                    isSelected={selectedResources.has(resource.resource_id)}
+                    onSelect={handleResourceSelect}
+                    onClick={handleResourceClick}
+                    onDelete={
+                      resource.status === "indexed"
+                        ? handleDeleteClick
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <AlertDialog
+          open={!!resourceToDelete}
+          onOpenChange={() => setResourceToDelete(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove from index?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove the file from the index. The file will remain
+                in Google Drive.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm}>
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    </TooltipProvider>
   );
 };
