@@ -58,6 +58,7 @@ export const FilePicker = ({
   const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(
     null
   );
+  const [isIndexing, setIsIndexing] = useState(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -196,6 +197,7 @@ export const FilePicker = ({
 
       // Clear selected resources
       setSelectedResources(new Set());
+      setIsIndexing(false);
     },
     onError: (error) => {
       toast({
@@ -206,6 +208,7 @@ export const FilePicker = ({
             : "Failed to create knowledge base",
         variant: "destructive",
       });
+      setIsIndexing(false);
     },
   });
 
@@ -288,6 +291,7 @@ export const FilePicker = ({
       return;
     }
 
+    setIsIndexing(true);
     await createKnowledgeBase.mutateAsync(selectedFiles);
   };
 
@@ -323,9 +327,16 @@ export const FilePicker = ({
                 <Button
                   variant="outline"
                   onClick={handleIndexSelected}
-                  disabled={selectedResources.size === 0}
+                  disabled={selectedResources.size === 0 || isIndexing}
                 >
-                  Index Selected Files
+                  {isIndexing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Indexing...
+                    </>
+                  ) : (
+                    "Index Selected Files"
+                  )}
                 </Button>
               </div>
             </div>

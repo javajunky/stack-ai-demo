@@ -81,7 +81,7 @@ export default function Home() {
 
   return (
     <main className="container p-4 mx-auto">
-      <Card className="mb-8">
+      <Card className="mb-8 border-none shadow-none">
         <CardHeader>
           <CardTitle>Google Drive File Picker</CardTitle>
           <CardDescription>Select files from your Google Drive</CardDescription>
