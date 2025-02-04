@@ -119,7 +119,7 @@ const useFileList = ({ connectionId, resourceId }: UseFileListProps) => {
         if (kbResource) {
           return {
             ...resource,
-            status: kbResource.status || "indexed",
+            status: kbResource.status,
             knowledge_base_id: knowledgeBase?.knowledge_base_id,
           };
         }
@@ -135,7 +135,7 @@ const useFileList = ({ connectionId, resourceId }: UseFileListProps) => {
           };
         }
 
-        // Default state
+        // Default state - keep as "resource"
         return {
           ...resource,
           status: "resource",
