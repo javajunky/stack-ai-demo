@@ -517,7 +517,7 @@ export const FilePicker = ({
           open={!!resourceToDelete}
           onOpenChange={() => setResourceToDelete(null)}
         >
-          <AlertDialogContent>
+          <AlertDialogContent className="z-[100]">
             <AlertDialogHeader>
               <AlertDialogTitle>Remove from index?</AlertDialogTitle>
               <AlertDialogDescription>
