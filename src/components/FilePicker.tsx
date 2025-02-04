@@ -412,6 +412,7 @@ export const FilePicker = ({
               </div>
               <div className="flex items-center gap-2">
                 <Button
+                  variant="outline"
                   onClick={handleIndexSelected}
                   disabled={selectedResources.size === 0}
                 >
