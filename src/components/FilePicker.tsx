@@ -37,9 +37,6 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
 } from "@/components/ui/breadcrumb";
-import KnowledgeBasePicker, {
-  KnowledgeBase,
-} from "@/components/KnowledgeBasePicker";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface PathSegment {
@@ -61,9 +58,6 @@ export const FilePicker = ({
   const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(
     null
   );
-  const [selectedKnowledgeBaseId, setSelectedKnowledgeBaseId] = useState<
-    string | null
-  >(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -116,47 +110,6 @@ export const FilePicker = ({
         variant: "destructive",
       });
       setResourceToDelete(null);
-    },
-  });
-
-  const syncKnowledgeBase = useMutation({
-    mutationFn: async (kbId: string) => {
-      const response = await fetch(`/api/knowledge-bases/sync`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ kbId }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to sync knowledge base");
-      }
-
-      // Sync is asynchronous, so a null response is expected
-      return response.status === 202 || response.status === 200;
-    },
-    onSuccess: (success) => {
-      if (success) {
-        queryClient.invalidateQueries({ queryKey: ["files"] });
-        queryClient.invalidateQueries({ queryKey: ["knowledge-base"] });
-        toast({
-          title: "Sync started",
-          description:
-            "The knowledge base is being synced. This may take a few minutes.",
-        });
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to sync knowledge base",
-        variant: "destructive",
-      });
     },
   });
 
@@ -243,9 +196,6 @@ export const FilePicker = ({
 
       // Clear selected resources
       setSelectedResources(new Set());
-
-      // Trigger sync after creation
-      syncKnowledgeBase.mutate(data.knowledge_base_id);
     },
     onError: (error) => {
       toast({
@@ -258,6 +208,32 @@ export const FilePicker = ({
       });
     },
   });
+
+  const sortedAndFilteredResources = resources
+    ?.map((resource) => ({
+      ...resource,
+      status: resource.status === "resource" ? "indexed" : resource.status,
+    }))
+    .filter((resource) =>
+      resource.inode_path.path.toLowerCase().includes(filterText.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        // Sort by type first (directories before files) only when sorting by name
+        if (a.inode_type !== b.inode_type) {
+          return a.inode_type === "directory" ? -1 : 1;
+        }
+        return a.inode_path.path.localeCompare(b.inode_path.path);
+      }
+      // When sorting by date, ignore type and sort purely by date
+      return (
+        new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime()
+      );
+    });
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilterText(e.target.value);
+  };
 
   const handleResourceClick = (resource: Resource) => {
     if (resource.inode_type === "directory") {
@@ -300,32 +276,6 @@ export const FilePicker = ({
     }
   };
 
-  const sortedAndFilteredResources = resources
-    ?.map((resource) => ({
-      ...resource,
-      status: resource.status === "resource" ? "indexed" : resource.status,
-    }))
-    .filter((resource) =>
-      resource.inode_path.path.toLowerCase().includes(filterText.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (sortBy === "name") {
-        // Sort by type first (directories before files) only when sorting by name
-        if (a.inode_type !== b.inode_type) {
-          return a.inode_type === "directory" ? -1 : 1;
-        }
-        return a.inode_path.path.localeCompare(b.inode_path.path);
-      }
-      // When sorting by date, ignore type and sort purely by date
-      return (
-        new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime()
-      );
-    });
-
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilterText(e.target.value);
-  };
-
   const handleIndexSelected = async () => {
     const selectedFiles =
       resources?.filter((r) => selectedResources.has(r.resource_id)) || [];
@@ -339,34 +289,6 @@ export const FilePicker = ({
     }
 
     await createKnowledgeBase.mutateAsync(selectedFiles);
-  };
-
-  const handleKnowledgeBaseSelect = async (kb: KnowledgeBase) => {
-    console.log("Selected Knowledge Base:", kb);
-    // Clear current path and selected resources
-    setCurrentPath([]);
-    setSelectedResources(new Set());
-
-    const kbId = kb.knowledge_base_id || kb.id;
-    if (!kbId) {
-      toast({
-        title: "Error",
-        description: "Invalid knowledge base selected",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedKnowledgeBaseId(kbId);
-
-    // Invalidate queries to reload resources with the new knowledge base
-    queryClient.invalidateQueries({ queryKey: ["files"] });
-    queryClient.invalidateQueries({ queryKey: ["knowledge-base"] });
-
-    toast({
-      title: "Knowledge Base Selected",
-      description: `Loaded Knowledge Base ${kbId.slice(0, 8)}`,
-    });
   };
 
   if (error) {
@@ -388,19 +310,6 @@ export const FilePicker = ({
           <CardHeader className="border-b">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9">
-                      <Menu className="w-5 h-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <KnowledgeBasePicker
-                      onSelect={handleKnowledgeBaseSelect}
-                      connectionId={connectionId}
-                    />
-                  </DropdownMenuContent>
-                </DropdownMenu>
                 <div>
                   <CardTitle className="text-xl font-semibold">
                     File Picker
@@ -474,7 +383,7 @@ export const FilePicker = ({
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">Sort By: {sortBy}</Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="bg-white">
                   <DropdownMenuItem onClick={() => setSortBy("name")}>
                     {sortBy === "name" && <Check className="w-4 h-4 mr-2" />}
                     Name
