@@ -1,14 +1,11 @@
 # Stack AI File Picker Demo
-
 A custom File Picker implementation for Google Drive Connection.
 
 ## Prerequisites
-
 - Node.js (v18 or higher)
 - pnpm
 
 ## Setup
-
 1. Clone the repository
 2. Install dependencies:
 
@@ -28,7 +25,6 @@ cp .env.sample .env
 - Stack AI account email and password
 
 ## Running the Project
-
 Start the development server:
 
 ```bash
@@ -38,8 +34,15 @@ pnpm dev
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
 ## Features
-
 - Browse Google Drive files and folders
 - Select and index files
 - Sort and filter capabilities
 - File status tracking
+
+## Tech Stack
+- Next.js - App Router for server-side rendering and efficient routing
+- TailwindCSS - Utility-first CSS for rapid UI development
+- shadcn/ui - High-quality, accessible UI components
+- Tanstack Query - Powerful data synchronization and caching
+- Lucide Icons - Good looking, consistent icon set
+- Supabase - Backend and authentication

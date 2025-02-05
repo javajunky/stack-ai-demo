@@ -115,100 +115,36 @@ export const FilePicker = ({
   });
 
   const createKnowledgeBase = useMutation({
-    mutationFn: async (resources: Resource[]) => {
-      const connection_source_ids = resources.map((r) => r.resource_id);
-      console.log("Selected resources:", resources);
-      console.log("Connection ID:", connectionId);
-      console.log("Resource IDs:", connection_source_ids);
-
-      const requestBody = {
-        connection_id: connectionId,
-        connection_source_ids,
-        name: "Test Knowledge Base",
-        description: "Files indexed from Google Drive",
-        indexing_params: {
-          ocr: false,
-          unstructured: true,
-          embedding_params: {
-            embedding_model: "text-embedding-ada-002",
-            api_key: null,
-          },
-          chunker_params: {
-            chunk_size: 1500,
-            chunk_overlap: 500,
-            chunker: "sentence",
-          },
-        },
-        org_level_role: null,
-        cron_job_id: null,
-      };
-
-      console.log("Creating knowledge base with:", requestBody);
-
+    mutationFn: async ({
+      name,
+      description,
+      connection_id,
+      connection_source_ids,
+    }: {
+      name: string;
+      description: string;
+      connection_id: string;
+      connection_source_ids: string[];
+    }) => {
       const response = await fetch("/api/knowledge-bases", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          name,
+          description,
+          connection_id,
+          connection_source_ids,
+        }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        console.error("Failed to create knowledge base:", error);
         throw new Error(error.error || "Failed to create knowledge base");
       }
 
-      const data = await response.json();
-      console.log("Knowledge base created:", data);
-      return { data, resources };
-    },
-    onSuccess: ({ data, resources }) => {
-      // Update the resources with pending status
-      const updatedResources = resources.map((resource) => ({
-        ...resource,
-        status: "pending" as const,
-        knowledge_base_id: data.knowledge_base_id,
-      }));
-
-      // Update the cache with the new status
-      queryClient.setQueryData(["files"], (oldData: Resource[] | undefined) => {
-        if (!oldData) return oldData;
-        const newData = [...oldData];
-        updatedResources.forEach((updatedResource) => {
-          const index = newData.findIndex(
-            (r) => r.resource_id === updatedResource.resource_id
-          );
-          if (index !== -1) {
-            newData[index] = updatedResource;
-          }
-        });
-        return newData;
-      });
-
-      // Invalidate both files and knowledge-base queries
-      queryClient.invalidateQueries({ queryKey: ["files"] });
-      queryClient.invalidateQueries({ queryKey: ["knowledge-base"] });
-
-      toast({
-        title: "Knowledge base created",
-        description: "Starting indexing process...",
-      });
-
-      // Clear selected resources
-      setSelectedResources(new Set());
-      setIsIndexing(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to create knowledge base",
-        variant: "destructive",
-      });
-      setIsIndexing(false);
+      return response.json();
     },
   });
 
@@ -292,7 +228,12 @@ export const FilePicker = ({
     }
 
     setIsIndexing(true);
-    await createKnowledgeBase.mutateAsync(selectedFiles);
+    await createKnowledgeBase.mutateAsync({
+      name: "Test Knowledge Base",
+      description: "Files indexed from Google Drive",
+      connection_id: connectionId,
+      connection_source_ids: selectedFiles.map((r) => r.resource_id),
+    });
   };
 
   if (error) {
