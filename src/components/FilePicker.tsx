@@ -388,13 +388,19 @@ export const FilePicker = ({
                   <Button variant="outline">Sort By: {sortBy}</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-white">
-                  <DropdownMenuItem onClick={() => setSortBy("name")}>
-                    {sortBy === "name" && <Check className="w-4 h-4 mr-2" />}
+                  <DropdownMenuItem
+                    onClick={() => setSortBy("name")}
+                    className="flex justify-between"
+                  >
                     Name
+                    {sortBy === "name" && <Check className="w-4 h-4 ml-2" />}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy("date")}>
-                    {sortBy === "date" && <Check className="w-4 h-4 mr-2" />}
+                  <DropdownMenuItem
+                    onClick={() => setSortBy("date")}
+                    className="flex justify-between"
+                  >
                     Date Modified
+                    {sortBy === "date" && <Check className="w-4 h-4 ml-2" />}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
