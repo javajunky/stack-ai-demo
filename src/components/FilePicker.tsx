@@ -282,7 +282,7 @@ export const FilePicker = ({
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="bg-blue-300 hover:bg-blue-400 border border-slate-800"
+                  className="bg-sky-500 hover:bg-sky-600 text-white"
                   onClick={(e) => e.stopPropagation()}
                   aria-label="Add"
                 >
