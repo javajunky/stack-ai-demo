@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FilePickerProps, Resource } from "@/types/FilePicker";
 import useFileList from "@/lib/hooks/use-file-list";
-import { Loader2, ChevronRight, Check, Menu, Home } from "lucide-react";
+import { Loader2, ChevronRight, Check, Home, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -338,6 +338,15 @@ export const FilePicker = ({
                     "Index Selected Files"
                   )}
                 </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="bg-blue-300 hover:bg-blue-400 border border-slate-800"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label="Add"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -421,7 +430,7 @@ export const FilePicker = ({
                     resource={resource}
                     isSelected={selectedResources.has(resource.resource_id)}
                     onSelect={handleResourceSelect}
-                    onClick={handleResourceClick}
+                    onResourceClick={handleResourceClick}
                     onDelete={
                       resource.status !== "deleted"
                         ? handleDeleteClick
