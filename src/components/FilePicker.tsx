@@ -146,6 +146,49 @@ export const FilePicker = ({
 
       return response.json();
     },
+    onSuccess: (data) => {
+      // Update the resources with pending status
+      queryClient.setQueryData(
+        ["files", connectionId, currentResourceId],
+        (oldData: Resource[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map((resource) => {
+            if (selectedResources.has(resource.resource_id)) {
+              return {
+                ...resource,
+                status: "pending",
+                knowledge_base_id: data.knowledge_base_id,
+              };
+            }
+            return resource;
+          });
+        }
+      );
+
+      // Invalidate queries to refetch latest data
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      queryClient.invalidateQueries({ queryKey: ["knowledge-base"] });
+
+      toast({
+        title: "Knowledge base created",
+        description: "Starting indexing process...",
+      });
+
+      // Clear selected resources and reset indexing state
+      setSelectedResources(new Set());
+      setIsIndexing(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to create knowledge base",
+        variant: "destructive",
+      });
+      setIsIndexing(false);
+    },
   });
 
   const sortedAndFilteredResources = resources
